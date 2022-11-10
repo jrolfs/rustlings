@@ -16,47 +16,58 @@
 //
 // Execute `rustlings hint box1` for hints :)
 
-use std::rc::Rc;
+use std::mem;
 
 use List::{Cons, Nil};
 
 // I AM NOT DONE
 
 #[derive(PartialEq, Debug)]
-pub enum List<T: Copy> {
-    Cons(T, Rc<List<T>>),
+pub enum List<T> {
+    Cons(T, Box<List<T>>),
     Nil,
 }
 
-impl<T: Copy> List<T> {
-    fn iter(self) -> ListIterator<T> {
+impl<T> List<T> {
+    // TODO: implement reference iterator
+    // fn iter(&self) -> ListIterator<&T> {
+
+    // }
+
+    fn into_iter(self) -> ListIterator<T> {
         ListIterator::new(self)
     }
 }
 
-pub struct ListIterator<T: Copy> {
-    current: Rc<List<T>>,
+impl<T> Default for List<T> {
+    fn default() -> Self {
+        Self::Nil
+    }
 }
 
-impl<T: Copy> ListIterator<T> {
+pub struct ListIterator<T> {
+    current: List<T>,
+}
+
+impl<T> ListIterator<T> {
     fn new(list: List<T>) -> Self {
         Self {
-            current: Rc::new(list),
+            current: list,
         }
     }
 }
 
-impl<T: Copy> Iterator for ListIterator<T> {
+impl<T> Iterator for ListIterator<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let current = Rc::clone(&self.current);
+        let current = mem::take(&mut self.current);
 
-        match &*current {
-            List::Cons(value, next) => {
-                self.current = Rc::clone(next);
+        match current {
+            List::Cons(value, mut next) => {
+                mem::swap(&mut self.current, next.as_mut());
 
-                return Option::Some(*value);
+                return Option::Some(value);
             }
             Nil => Option::None,
         }
@@ -76,18 +87,19 @@ pub fn create_empty_list() -> List<i32> {
 }
 
 pub fn create_non_empty_list() -> List<i32> {
-    Cons(5, Rc::new(Cons(4, Rc::new(Nil))))
+    Cons(5, Box::new(Cons(4, Box::new(Nil))))
 }
 
-// struct NumberHolder {
-//     number: i32,
-// }
+#[derive(Debug)]
+struct NumberHolder {
+    number: i32,
+}
 
-// impl NumberHolder {
-//     fn new(number: i32) -> Self {
-//         Self { number }
-//     }
-// }
+impl NumberHolder {
+    fn new(number: i32) -> Self {
+        Self { number }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -108,20 +120,37 @@ mod tests {
     fn test_list_iterator() {
         assert_eq!(
             vec![5, 4],
-            create_non_empty_list().iter().collect::<Vec<i32>>()
+            create_non_empty_list().into_iter().collect::<Vec<i32>>()
         )
     }
 
-    // #[test]
-    // fn test_list_iterator_no_copy() {
-    //     assert_eq!(
-    //         vec![NumberHolder::new(5), NumberHolder::new(4)],
-    //         Cons(
-    //             NumberHolder::new(5),
-    //             Rc::new(Cons(NumberHolder::new(4), Rc::new(Nil)))
-    //         )
-    //         .iter()
-    //         .collect::<Vec<NumberHolder>>()
-    //     )
-    // }
+    #[test]
+    fn test_list_iterator_control() {
+        assert_eq!(
+            vec![&5, &4],
+            vec![5, 4].iter().collect::<Vec<&i32>>()
+        )
+    }
+
+    #[test]
+    fn test_list_into_iterator_control() {
+        assert_eq!(
+            vec![5, 4],
+            vec![5, 4].into_iter().collect::<Vec<i32>>()
+        )
+    }
+
+    #[test]
+    fn test_list_iterator_no_copy() {
+        assert_eq!(
+            vec![5,4 ],
+            Cons(
+                NumberHolder::new(5),
+                Box::new(Cons(NumberHolder::new(4), Box::new(Nil)))
+            )
+            .into_iter()
+            .map(|holder| holder.number)
+            .collect::<Vec<i32>>()
+        )
+    }
 }
