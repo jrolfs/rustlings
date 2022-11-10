@@ -6,12 +6,16 @@
 // This test has a problem with it -- make the test compile! Make the test
 // pass! Make the test fail! Execute `rustlings hint tests1` for hints :)
 
-// I AM NOT DONE
+fn returns_true() -> bool {
+    true
+}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn you_can_assert() {
-        assert!();
+        assert!(returns_true());
     }
 }
